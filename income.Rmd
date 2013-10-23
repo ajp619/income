@@ -127,9 +127,9 @@ train <- read.csv(paste0(dir, file.train), sep = ",", strip.white = TRUE, na.str
 test <- read.csv(paste0(dir, file.test), sep = ",", strip.white = TRUE, na.strings = "?", skip=1)
 
 # Assign column names
-col_names <- c("age", "workclass", "fnlwgt", "education", "education-num", "marital status", 
+col_names <- c("age", "workclass", "fnlwgt", "education", "education-num", "marital_status", 
            "occupation", "relationship", "race", "sex", "capital-gain", "capital-loss", 
-           "hours-per-week", "native-country", "50k")
+           "hours-per-week", "native-country", "income")
 names(train) <- col_names
 names(test) <- col_names
 
@@ -142,12 +142,13 @@ target <- col_names[M]
 Load Required Packages
 ----------------------
 ```{r}
-list.of.packages <- c("rpart", "rattle")
+list.of.packages <- c("rpart", "rattle", "randomForest")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 rm(list.of.packages, new.packages)
 library(rpart)
 library(rattle)
+library(randomForest)
 ```
 
 
@@ -165,15 +166,13 @@ sum(is.na(train))  #
 # Hist of age
 hist(train$age)
 
-
-
 ```
 
 Clean Data:
 -----------
 
-```{r}
-train <- train[complete.cases(train),]
+```{r eval=FALSE}
+train <- train[complete.cases(train),]  #rpart deals with missing values (see usesurrogate)
 ```
 
 
@@ -181,15 +180,38 @@ Create Tree
 -----------
 
 ```{r}
-form = formula(50k ~ .)
+form = formula(income ~ .)
 
 tree.m <- rpart(form,
                  data=train[, c(input,target)],
                  method="class",
                  parms=list(split="information"),
-                 control=rpart.control(usesurrogate=2, 
+                 control=rpart.control(usesurrogate=2,  # How to treat missing values
                                        maxsurrogate=0,
                                        minsplit=30,
                                        maxdepth=20))
 drawTreeNodes(tree.m)
+eval(parse(text=genPlotTitleCmd("Characteristics Prediting Income")))
+print(tree.m)
+```
+
+What effect does the split value have?
+
+```{r}
+form = formula(income ~ .)
+
+tree.m <- rpart(form,
+                 data=train[, c(input,target)],
+                 method="class",
+                 parms=list(split="gini"),
+                 control=rpart.control(usesurrogate=2,  # How to treat missing values
+                                       maxsurrogate=0,
+                                       minsplit=30,
+                                       maxdepth=20))
+drawTreeNodes(tree.m)
+```
+
+
+```{r eval=FALSE}
+fit <- randomForest(form, data=train)
 ```
